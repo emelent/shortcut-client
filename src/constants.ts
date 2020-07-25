@@ -1,0 +1,1 @@
+export const hubUrl = "http://localhost:5000/videoHub"

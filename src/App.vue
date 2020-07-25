@@ -1,22 +1,3 @@
-<template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
-  </div>
-</template>
-
-<script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
-import HelloWorld from './components/HelloWorld.vue';
-
-@Component({
-  components: {
-    HelloWorld,
-  },
-})
-export default class App extends Vue {}
-</script>
-
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
@@ -26,4 +7,110 @@ export default class App extends Vue {}
   color: #2c3e50;
   margin-top: 60px;
 }
+
+.download{
+  display: block;
+  width: 150px;
+  margin: 20px auto;
+  background: lightseagreen;
+  padding: 10px;
+  color: #333;
+  font-weight: bold;
+}
 </style>
+<template>
+  <div id="app">
+    <Search @fetchUrls="fetchUrls" />
+    <VideoTrimmer 
+      v-if="!search && !downloadReady"
+      :audioUrl="audioUrl"
+      :videoUrl="videoUrl"
+      @trimVideo="trimVideo"
+    />
+    <a 
+      class="download"
+      :href="downloadUrl"
+      v-if="downloadReady"
+    >Download Video</a>
+  </div>
+</template>
+<script lang="ts">
+import { Component, Vue } from "vue-property-decorator"
+import Search from "./components/Search.vue"
+import VideoTrimmer from "./components/VideoTrimmer.vue"
+import * as signalr from '@microsoft/signalr'
+import { hubUrl } from "./constants"
+
+@Component({
+  components: {
+    Search,
+    VideoTrimmer
+  },
+})
+export default class App extends Vue {
+  search: Boolean = true
+  loading: Boolean = false
+  downloadReady: Boolean = false
+
+  private connection!: signalr.HubConnection
+
+  audioUrl!: string 
+  videoUrl!: string 
+  downloadUrl!: string
+
+  created() {
+    this.connection = new signalr.HubConnectionBuilder()
+      .withUrl(hubUrl)
+      .build()
+
+    console.log("connecting")
+    this.connection.on("DownloadLink", this.onDownloadLink)
+    this.connection.on("AvUrls", this.onAvUrls)
+    this.connection.on("ReceiveMessage", this.onReceiveMessage)
+    this.connection.start()
+  }
+
+  beforeDestroy() {
+    console.log("disconnecting")
+    this.connection.stop()
+  }
+
+  onDownloadLink(url: string) {
+    this.loading = false
+    this.downloadReady = true
+    this.search = true
+    this.downloadUrl = url
+    console.log("DownloadUrl =>", url)
+  }
+
+  onAvUrls(videoUrl: string, audioUrl: string) {
+    this.loading = false
+    this.search = false
+    this.audioUrl = audioUrl
+    this.videoUrl = videoUrl
+    this.downloadReady = false
+    this.search = false
+    console.log("AvUrls =>", audioUrl, videoUrl)
+  }
+
+  onReceiveMessage(message: string) {
+    console.log(message)
+  }
+
+  fetchUrls(url: string) {
+    console.log("Fetching av urls")
+    this.videoUrl = url
+    this.connection.invoke("RequestAvUrls", url)
+      .catch(err => console.log("Error =>", err))
+  }
+
+  trimVideo(start: string, duration: string) {
+    this.loading = true
+    console.log("video =>", this.videoUrl)
+    console.log("start =>", start)
+    console.log("duration =>", duration)
+    this.connection.invoke("RequestTrimVideo", this.videoUrl, start, duration)
+      .catch(err => console.log("Error =>", err))
+  }
+}
+</script>
