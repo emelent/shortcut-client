@@ -1,4 +1,4 @@
-# trim
+# cutty
 
 ## Project setup
 ```
