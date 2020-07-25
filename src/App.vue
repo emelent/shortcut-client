@@ -20,7 +20,11 @@
 </style>
 <template>
   <div id="app">
-    <Search @fetchUrls="fetchUrls" />
+    <h2 v-if="!serverAwake">Waking up server ...</h2>
+    <Search 
+      v-if="search && serverAwake"
+      @fetchUrls="fetchUrls"
+   />
     <VideoTrimmer 
       v-if="!search && !downloadReady"
       :audioUrl="audioUrl"
@@ -39,7 +43,7 @@ import { Component, Vue } from "vue-property-decorator"
 import Search from "./components/Search.vue"
 import VideoTrimmer from "./components/VideoTrimmer.vue"
 import * as signalr from '@microsoft/signalr'
-import { hubUrl } from "./constants"
+import { hubUrl, cuttyServer } from "./constants"
 
 @Component({
   components: {
@@ -48,9 +52,10 @@ import { hubUrl } from "./constants"
   },
 })
 export default class App extends Vue {
-  search: Boolean = true
-  loading: Boolean = false
-  downloadReady: Boolean = false
+  search: boolean = true
+  loading: boolean = false
+  downloadReady: boolean = false
+  serverAwake: boolean = false 
 
   private connection!: signalr.HubConnection
 
@@ -67,12 +72,21 @@ export default class App extends Vue {
     this.connection.on("DownloadLink", this.onDownloadLink)
     this.connection.on("AvUrls", this.onAvUrls)
     this.connection.on("ReceiveMessage", this.onReceiveMessage)
-    this.connection.start()
+
+    // wake the heroku server
+    this.serverAwake = false
+    fetch(`${cuttyServer}/api/wakeUp`)
+      .then(this.onServerAwake)
   }
 
   beforeDestroy() {
     console.log("disconnecting")
     this.connection.stop()
+  }
+
+  onServerAwake() {
+    this.serverAwake = true
+    this.connection.start()
   }
 
   onDownloadLink(url: string) {

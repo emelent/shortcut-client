@@ -1,1 +1,2 @@
-export const hubUrl = "http://localhost:5000/videoHub"
+export const cuttyServer = "https://avoguardo.herokuapp.com"
+export const hubUrl = `${cuttyServer}/videoHub`
