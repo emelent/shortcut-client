@@ -57,6 +57,7 @@ export default class App extends Vue {
   downloadReady: boolean = false
   serverAwake: boolean = false 
 
+  private youtubeUrl!: string
   private connection!: signalr.HubConnection
 
   audioUrl!: string 
@@ -113,17 +114,17 @@ export default class App extends Vue {
 
   fetchUrls(url: string) {
     console.log("Fetching av urls")
-    this.videoUrl = url
+    this.youtubeUrl = url
     this.connection.invoke("RequestAvUrls", url)
       .catch(err => console.log("Error =>", err))
   }
 
   trimVideo(start: string, duration: string) {
     this.loading = true
-    console.log("video =>", this.videoUrl)
+    console.log("video url =>", this.youtubeUrl)
     console.log("start =>", start)
     console.log("duration =>", duration)
-    this.connection.invoke("RequestTrimVideo", this.videoUrl, start, duration)
+    this.connection.invoke("RequestTrimVideo", this.youtubeUrl, start, duration)
       .catch(err => console.log("Error =>", err))
   }
 }
